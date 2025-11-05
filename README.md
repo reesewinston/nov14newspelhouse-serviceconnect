@@ -1,154 +1,203 @@
-# HW 4: Registration App Authentication with Supabase
+# Digital Entrepreneurship Lab — Tutoring Marketplace
 
-## 🛠️ Why Use Supabase?
-Authentication can be error-prone when building an application. Handling **user registration, email verification, login, and database management** can be painful with traditional setups that require managing your own database and email services. 
+This project extends the simple registration app from Lab 3 into a two-sided tutoring marketplace built with React, Express, and Supabase.
 
-**Supabase simplifies authentication** by providing a backend-as-a-service solution with built-in **PostgreSQL, authentication, and email handling**. With Supabase, we no longer need to manually manage user accounts, write our own authentication logic, or send emails ourselves.
+Students and tutors can register, log in, create profiles, upload photos, and browse available tutors with filters by subject and hourly rate.
 
-This new version of our **Registration App** replaces our old authentication system with Supabase, significantly reducing complexity and making it easier to maintain. 
+------------------------------------------------------------
 
-Clone this repo to get started: https://github.com/amoretti86/digitalentrepreneurship-lab3b
+## Overview
 
----
+Frontend: React (Create React App), Axios
+Backend: Express.js, Supabase SDK
+Database and Auth: Supabase (PostgreSQL + Auth + Storage)
+Storage: Supabase Storage for profile photos
 
-## 🔄 What Changed?
-### ❌ Removed Files
-1. **`db.js`** – We no longer need to manually create a PostgreSQL database and handle users. Supabase manages the database for us.
-2. **`email.js`** – Supabase handles email verification automatically, eliminating the need for our custom email-sending logic.
-3. **`migration.js`** – Since Supabase manages the database schema, we no longer need to run manual migrations.
-4. **Heroku Postgres Add-On** – Supabase provides a **fully managed PostgreSQL database**, so we don't need to add a separate database on Heroku.
+------------------------------------------------------------
 
----
+## Features
 
-## 🛠️ How to Set Up Supabase
+- Email registration and verification (Spelman and Morehouse domains)
+- Login and logout using Supabase Auth
+- Unified profiles table for both students and tutors
+- Tutors can set hourly rate, subjects, and upload a photo
+- Students can browse tutors and filter by subject and hourly rate
+- Modular React components:
+  - ProfileSetup.js for creating or updating profiles
+  - TutorCard.js and TutorList.js for displaying tutors
+  - Dashboard.js for switching between tabs
+- Supabase Row-Level Security (RLS) for data protection
 
-### 1️⃣ **Sign Up for Supabase**
-1. Go to [https://supabase.com/](https://supabase.com/) and create an account.
-2. Click **"New Project"** and give it a name.
-3. Choose a strong password for the database and click **"Create new project"**.
-4. Wait for Supabase to set up your database (this may take a few seconds).
+------------------------------------------------------------
 
-### 2️⃣ **Obtain Your Supabase Keys**
-Once your project is created:
-1. Go to **"Settings" → "API"** in the Supabase Dashboard.
-2. Copy the following values:
-   - **Supabase URL**
-   - **Anon Key**
-   - **Service Role Key** (Needed for admin operations)
+## Database Setup (Supabase)
 
----
+1. Create a "profiles" table in Supabase SQL Editor:
 
-## 🌍 Updating the Backend
-
-### 3️⃣ **Set Up Environment Variables**
-In your backend project, create a `.env` file and add:
-```bash
-SUPABASE_URL=your-supabase-url
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-PORT=5000
-```
-📌 **Check your spam folder** for the email verification code when signing up!
-
-### 4️⃣ **Install Dependencies**
-We need the Supabase SDK to connect to our authentication system. Install it by running:
-```bash
-npm install @supabase/supabase-js
-```
-
-### 5️⃣ **Update `server.js` to Use Supabase**
-Modify the backend to use Supabase for authentication:
-```javascript
-const { createClient } = require("@supabase/supabase-js");
-require("dotenv").config();
-
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  role text check (role in ('student','tutor')) not null,
+  name text not null,
+  school text,
+  major text,
+  grade text,
+  hourly_rate numeric,
+  subjects text[] default '{}',
+  photo_url text,
+  bio text,
+  created_at timestamp with time zone default now()
 );
-```
 
-### 6️⃣ **Registering a User**
-Replace manual database inserts with Supabase's authentication system:
-```javascript
-const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { name } } // Store additional user info
-});
-```
+create index if not exists idx_profiles_role on public.profiles(role);
+create index if not exists idx_profiles_hourly_rate on public.profiles(hourly_rate);
+create index if not exists idx_profiles_subjects on public.profiles using gin (subjects);
 
-### 7️⃣ **Email Verification Using a 6-Digit Code**
-Instead of email links, users enter a **6-digit verification code**:
-```javascript
-const { data, error } = await supabase.auth.verifyOtp({
-    email,
-    token: verificationCode,  // The 6-digit code from the email
-    type: "signup"
-});
-```
-📌 **Users must manually enter the verification code from their email.**
+alter table public.profiles enable row level security;
 
-### 8️⃣ **Logging In Users**
-Login now uses Supabase authentication:
-```javascript
-const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-});
-```
+2. Add RLS policies:
 
----
+create policy "read_tutors_public"
+on public.profiles for select
+to public using (role = 'tutor');
 
-## 🗄️ Accessing the Supabase Database
-To view and manage user accounts:
-1. **Go to Supabase Dashboard** → Click **"Authentication"** → **"Users"**.
-2. You can manually verify users, delete accounts, or reset passwords.
-3. To query the database directly, go to **"Database" → "Table Editor"**.
+create policy "read_own_profile"
+on public.profiles for select
+to authenticated using (auth.uid() = id);
 
-📌 You can also query data programmatically using the **Supabase SDK**:
-```javascript
-const { data, error } = await supabase.from("users").select("*");
-```
+create policy "insert_own_profile"
+on public.profiles for insert
+to authenticated with check (auth.uid() = id);
 
----
+create policy "update_own_profile"
+on public.profiles for update
+to authenticated
+using (auth.uid() = id)
+with check (auth.uid() = id);
 
-## 🚀 Deploying to Heroku
-Since we are using Supabase for authentication and storage, we **no longer need to add Heroku Postgres**.
+3. Create a public storage bucket in Supabase → Storage → Buckets
+   - Name: avatars
+   - Public access: enabled
 
-### Steps to Deploy:
-1. **Set environment variables on Heroku**
-```bash
-heroku config:set SUPABASE_URL=your-supabase-url
-heroku config:set SUPABASE_ANON_KEY=your-anon-key
-heroku config:set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-heroku config:set PORT=5000
-```
+------------------------------------------------------------
 
-2. **Push your code to Heroku**
-```bash
-git add .
-git commit -m "Deploy Supabase backend to Heroku"
-git push heroku main  # or 'master' if using older repo
-```
+## Environment Variables
 
-3. **Restart the app**
-```bash
-heroku restart
-```
+Server (.env):
 
-4. **Check logs for errors**
-```bash
-heroku logs --tail
-```
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+PORT=5000
 
----
+Client (.env):
 
-## 🎯 Summary
-✅ **No need for manual PostgreSQL setup** – Supabase handles it.
-✅ **No need for custom email handling** – Supabase sends verification codes.
-✅ **Faster and easier authentication** with Supabase's built-in auth.
-✅ **Easier database access** via Supabase UI and SDK.
-✅ **Simpler deployment** – Just set environment variables and deploy!
+REACT_APP_SUPABASE_URL=your_supabase_project_url
+REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-This version of the **Registration App** is now **much simpler and more scalable** with Supabase.
+------------------------------------------------------------
+
+## Project Structure
+
+digitalentrepreneurship-tutoringmarketplace/
+├── server/
+│   ├── server.js
+│   └── .env
+├── client/
+│   ├── src/
+│   │   ├── App.js
+│   │   ├── Dashboard.js
+│   │   ├── ProfileSetup.js
+│   │   ├── TutorCard.js
+│   │   ├── TutorList.js
+│   │   ├── supabaseClient.js
+│   │   └── *.css
+│   └── .env
+├── package.json
+└── README.md
+
+------------------------------------------------------------
+
+## How It Works
+
+Authentication:
+Handled by Supabase Auth. Users must register with a spelman.edu or morehouse.edu email address.
+After verifying the email via 6-digit OTP, users are logged in automatically.
+
+Profiles:
+All users share the same "profiles" table and are distinguished by a "role" field.
+Tutors include hourly rate, subjects, and bio.
+Students have simpler profiles and can browse tutors.
+
+API Endpoints:
+
+POST /register - Register a new user
+POST /login - Log in existing user
+POST /verify - Verify email with 6-digit code
+POST /api/profile - Create or update a profile
+GET /api/profile/:id - Get a user's profile
+GET /api/tutors - Get all tutor profiles, with optional filters (subject, maxRate)
+
+------------------------------------------------------------
+
+## React Components
+
+App.js - Handles registration, login, and verification flow
+Dashboard.js - Main view with "Find Tutors" and "My Profile" tabs
+ProfileSetup.js - Form for creating or updating profile
+TutorList.js - Lists tutors and allows filtering
+TutorCard.js - Displays tutor photo, subjects, and hourly rate
+supabaseClient.js - Frontend Supabase client for uploads
+
+------------------------------------------------------------
+
+## Running Locally
+
+1. Install dependencies
+
+npm install
+cd client && npm install
+
+2. Build frontend and start backend
+
+npm run build --prefix client
+node server/server.js
+
+Server runs on http://localhost:5000
+
+------------------------------------------------------------
+
+## Workflow Summary
+
+1. Register with a Spelman or Morehouse email
+2. Enter 6-digit verification code
+3. Dashboard loads with two tabs:
+   - Find Tutors: browse tutors, filter by subject and hourly rate
+   - My Profile: edit or update your profile and upload a photo
+4. Tutors are visible publicly; students can browse and filter them.
+
+------------------------------------------------------------
+
+## Educational Notes
+
+Students learn how to:
+
+- Extend a single-user registration app into a two-sided marketplace
+- Use Supabase Auth and RLS policies for secure data access
+- Handle image uploads with Supabase Storage
+- Implement filtering using query parameters
+- Compose a React app from reusable components
+- Connect React to an Express API using Axios
+
+------------------------------------------------------------
+
+## Future Extensions
+
+- Messaging between students and tutors
+- Appointment scheduling and payment integration
+- Availability calendar for tutors
+- Pagination and advanced search
+
+------------------------------------------------------------
+
+## License
+
+MIT License © 2025 Antonio Moretti

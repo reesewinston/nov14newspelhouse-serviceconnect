@@ -149,3 +149,13 @@ button:hover {
     background: linear-gradient(135deg, #cc0000, #ff4444);
 }
 /* ADDED: Dashboard Styles Section - End */
+
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.sub { color: #6b7280; }
+.tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.tabs button { padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; }
+.tabs .active { background: #111827; color: #fff; border-color: #111827; }
+.card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fff; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.chip { border: 1px solid #e5e7eb; border-radius: 9999px; padding: 6px 10px; background: #fff; }
+.chip.selected { background: #111827; color: white; border-color: #111827; }
