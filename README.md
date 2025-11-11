@@ -1,4 +1,4 @@
-# Digital Entrepreneurship Lab — Tutoring Marketplace
+# Digital Entrepreneurship Lab — Tutoring Marketplace this was started on nov 10 (new) copy 
 
 This project extends the simple registration app from Lab 3 into a two-sided tutoring marketplace built with React, Express, and Supabase.
 

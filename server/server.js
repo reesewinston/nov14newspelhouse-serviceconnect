@@ -3,7 +3,8 @@ const express = require('express');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
-
+//require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+console.log("SUPABASE URL: ", process.env.SUPABASE_URL) 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const app = express();
