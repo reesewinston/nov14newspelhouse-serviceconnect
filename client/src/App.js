@@ -12,62 +12,61 @@ function App() {
   const [isEmailSent, setIsEmailSent] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [authMode, setAuthMode] = useState('register');
-
-  // NEW: keep user object from server login response
   const [user, setUser] = useState(null);
 
   const handleRegister = async (e) => {
     e.preventDefault();
+
     const emailPattern = /@(spelman\.edu|morehouse\.edu)$/;
     if (!emailPattern.test(email)) {
-      setMessage('Email must end with @spelman.edu or @morehouse.edu.');
+      setMessage('email must end with @spelman.edu or @morehouse.edu');
       return;
     }
+
     try {
-      const response = await axios.post('/register', { name, email, password });
-      setMessage(response.data.message || 'Verification code sent to your email!');
+      const res = await axios.post('/register', { name, email, password });
+      setMessage(res.data.message || 'verification code sent');
       setIsEmailSent(true);
-    } catch (error) {
-      setMessage('Error during registration: ' + (error.response?.data?.message || error.message));
+    } catch (err) {
+      setMessage('error registering: ' + (err.response?.data?.message || err.message));
     }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('/login', { email, password });
-      if (response.data.success) {
-        const u = response.data.user;
+      const res = await axios.post('/login', { email, password });
+      if (res.data.success) {
+        const u = res.data.user;
         setUser(u);
-        setName(u?.name || 'User');
-        setMessage('Login successful!');
+        setName(u?.name || 'user');
+        setMessage('login successful');
         setIsVerified(true);
       } else {
-        setMessage(response.data.message || 'Login failed. Please check your credentials.');
+        setMessage(res.data.message || 'login failed');
       }
-    } catch (error) {
-      setMessage('Error during login: ' + (error.response?.data?.message || error.message));
+    } catch (err) {
+      setMessage('error logging in: ' + (err.response?.data?.message || err.message));
     }
   };
 
   const handleVerifyEmail = async () => {
     try {
-      const response = await axios.post('/verify', { email, verificationCode });
-      setMessage(response.data.message || 'Email verified successfully!');
-      if (response.data.success) {
-        // After verify, log them in immediately with the same creds for demo flow
-        try {
-          const login = await axios.post('/login', { email, password });
-          if (login.data.success) {
-            const u = login.data.user;
-            setUser(u);
-            setName(u?.name || 'User');
-            setIsVerified(true);
-          }
-        } catch (e) { /* ignore */ }
+      const res = await axios.post('/verify', { email, verificationCode });
+      setMessage(res.data.message || 'email verified');
+
+      if (res.data.success) {
+        // auto-login after verification
+        const login = await axios.post('/login', { email, password });
+        if (login.data.success) {
+          const u = login.data.user;
+          setUser(u);
+          setName(u?.name || 'user');
+          setIsVerified(true);
+        }
       }
-    } catch (error) {
-      setMessage('Invalid verification code.');
+    } catch (err) {
+      setMessage('invalid verification code');
     }
   };
 
@@ -85,62 +84,79 @@ function App() {
   const renderLoginForm = () => (
     <form onSubmit={handleLogin}>
       <div>
-        <label>Email</label>
+        <label>email</label>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       <div>
-        <label>Password</label>
+        <label>password</label>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </div>
-      <button type="submit">Login</button>
+      <button type="submit">login</button>
     </form>
   );
 
   const renderRegistrationForm = () => (
     <form onSubmit={handleRegister}>
       <div>
-        <label>Name</label>
+        <label>name</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
       </div>
       <div>
-        <label>Email</label>
+        <label>email</label>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       <div>
-        <label>Password</label>
+        <label>password</label>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </div>
-      <button type="submit">Register</button>
+      <button type="submit">register</button>
     </form>
   );
 
   const renderVerificationForm = () => (
     <div>
-      <h2>Verify Your Email</h2>
-      <label>Enter Verification Code</label>
-      <input type="text" value={verificationCode} onChange={(e) => setVerificationCode(e.target.value)} required />
-      <button onClick={handleVerifyEmail}>Verify</button>
+      <h2>verify email</h2>
+      <label>verification code</label>
+      <input
+        type="text"
+        value={verificationCode}
+        onChange={(e) => setVerificationCode(e.target.value)}
+        required
+      />
+      <button onClick={handleVerifyEmail}>verify</button>
     </div>
   );
 
-  // FIXED: Only wrap auth forms in .App container, not Dashboard
   return (
     <>
       {!isVerified ? (
         <div className="auth-container">
           <div className="App">
-            <h1>Welcome to AUC Tutor</h1>
+            <h1>spelhouse service connect</h1>
+            <p className="subtitle">a platform for spelman + morehouse students to share services</p>
+
             {isEmailSent ? (
               renderVerificationForm()
             ) : (
               <>
                 <div className="auth-tabs">
-                  <button className={`tab-btn ${authMode === 'register' ? 'active' : ''}`} onClick={() => setAuthMode('register')}>Register</button>
-                  <button className={`tab-btn ${authMode === 'login' ? 'active' : ''}`} onClick={() => setAuthMode('login')}>Login</button>
+                  <button
+                    className={`tab-btn ${authMode === 'register' ? 'active' : ''}`}
+                    onClick={() => setAuthMode('register')}
+                  >
+                    register
+                  </button>
+                  <button
+                    className={`tab-btn ${authMode === 'login' ? 'active' : ''}`}
+                    onClick={() => setAuthMode('login')}
+                  >
+                    login
+                  </button>
                 </div>
                 {authMode === 'register' ? renderRegistrationForm() : renderLoginForm()}
               </>
             )}
+
             {message && <p className="message">{message}</p>}
           </div>
         </div>
@@ -150,4 +166,5 @@ function App() {
     </>
   );
 }
+
 export default App;

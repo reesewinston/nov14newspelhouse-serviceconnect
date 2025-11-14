@@ -1,163 +1,304 @@
 // server/server.js
+
 const express = require('express');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
-//require('dotenv').config({ path: path.resolve(__dirname, '.env') });
-console.log("SUPABASE URL: ", process.env.SUPABASE_URL) 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const multer = require('multer');
+
+// log url for debugging
+console.log("supabase url:", process.env.SUPABASE_URL);
+
+// supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 const app = express();
 app.use(express.json());
 
-// Serve CRA build
+// allow serving react build
 app.use(express.static(path.join(__dirname, '../client/build')));
 
-/* =========================
-   AUTH (unchanged)
-   ========================= */
-// Register
+/* ======================================================
+   AUTH (Spelman + Morehouse Only)
+   ====================================================== */
+
+// REGISTER
 app.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
-  console.log(`Received registration request for email: ${email}`);
 
   const emailPattern = /@(spelman\.edu|morehouse\.edu)$/;
   if (!emailPattern.test(email)) {
-    return res.status(400).json({ success: false, message: 'Email must end with @spelman.edu or @morehouse.edu.' });
+    return res.status(400).json({
+      success: false,
+      message: 'email must end with @spelman.edu or @morehouse.edu',
+    });
   }
 
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name } }
+      options: { data: { name } },
     });
+
     if (error) throw error;
-    res.json({ success: true, message: 'Registration successful. Check your email for verification.' });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ success: false, message: error.message || 'Error registering user' });
+
+    res.json({
+      success: true,
+      message: 'registration successful. check your email for a verification code.',
+    });
+  } catch (err) {
+    console.error('register error:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'error registering user',
+    });
   }
 });
 
-// Login
+// LOGIN
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  console.log(`Received login request for email: ${email}`);
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
     if (error) throw error;
-    // Return the user id so client can save profile/update
-    res.json({ success: true, message: 'Login successful', user: { id: data.user.id, email: data.user.email, name: data.user.user_metadata?.name } });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(401).json({ success: false, message: 'Invalid email or password' });
+
+    res.json({
+      success: true,
+      message: 'login successful',
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name,
+      },
+    });
+  } catch (err) {
+    console.error('login error:', err);
+    res.status(401).json({
+      success: false,
+      message: 'invalid email or password',
+    });
   }
 });
 
-// Verify (OTP 6-digit)
+// VERIFY EMAIL (OTP)
 app.post('/verify', async (req, res) => {
   const { email, verificationCode } = req.body;
-  console.log(`Verifying email: ${email} with code: ${verificationCode}`);
 
   try {
     const { data, error } = await supabase.auth.verifyOtp({
       email,
       token: verificationCode,
-      type: 'signup'
+      type: 'signup',
     });
+
     if (error) {
-      console.error('Verification failed:', error);
-      return res.status(400).json({ success: false, message: 'Invalid verification code.' });
+      console.error('verify error:', error);
+      return res.status(400).json({
+        success: false,
+        message: 'invalid verification code',
+      });
     }
-    res.json({ success: true, message: 'Email verified successfully' });
-  } catch (error) {
-    console.error('Verification error:', error);
-    res.status(500).json({ success: false, message: 'Error verifying email' });
+
+    res.json({ success: true, message: 'email verified' });
+  } catch (err) {
+    console.error('verify error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'error verifying email',
+    });
   }
 });
 
-/* =========================
-   MARKETPLACE API
-   ========================= */
 
-// Upsert (create/update) profile
+/* ======================================================
+   PROFILE (students + providers)
+   ====================================================== */
+
 app.post('/api/profile', async (req, res) => {
   try {
-    const {
-      id,           // user id (uuid from auth)
-      role,         // 'student' | 'tutor'
-      name,
-      school,
-      major,
-      grade,
-      hourly_rate,  // number or null
-      subjects,     // array of strings
-      photo_url,
-      bio
-    } = req.body;
+    const { id, role, name, school, major, bio, photo_url } = req.body;
 
     if (!id || !role || !name) {
-      return res.status(400).json({ success: false, message: 'id, role, and name are required.' });
+      return res.status(400).json({
+        success: false,
+        message: 'id, role, and name are required',
+      });
     }
 
     const { data, error } = await supabase
       .from('profiles')
-      .upsert([{ id, role, name, school, major, grade, hourly_rate, subjects, photo_url, bio }], { onConflict: 'id' })
+      .upsert(
+        [
+          {
+            id,
+            role,
+            name,
+            school,
+            major,
+            bio,
+            photo_url,
+          },
+        ],
+        { onConflict: 'id' }
+      )
       .select('*')
       .single();
 
     if (error) throw error;
-    res.json({ success: true, message: 'Profile saved', profile: data });
+
+    res.json({ success: true, message: 'profile saved', profile: data });
   } catch (err) {
-    console.error('Profile upsert error:', err);
+    console.error('profile error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Get own profile
+// GET PROFILE
 app.get('/api/profile/:id', async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', id)
       .single();
+
     if (error) throw error;
+
     res.json({ success: true, profile: data });
   } catch (err) {
-    res.status(404).json({ success: false, message: 'Profile not found' });
+    res.status(404).json({ success: false, message: 'profile not found' });
   }
 });
 
-// Browse tutors with filters
-app.get('/api/tutors', async (req, res) => {
+
+/* ======================================================
+   SERVICES (hair, braids, nails, tutoring, etc.)
+   ====================================================== */
+
+// CREATE / UPDATE SERVICE
+app.post('/api/service', async (req, res) => {
   try {
-    const { subject, maxRate } = req.query;
-    let query = supabase.from('profiles').select('*').eq('role', 'tutor');
-    if (subject && subject.trim()) {
-      // subjects is text[]; 'contains' expects array
-      query = query.contains('subjects', [subject.trim()]);
+    const { id, provider_id, title, category, price, description, image_url } = req.body;
+
+    if (!provider_id || !title) {
+      return res.status(400).json({
+        success: false,
+        message: 'provider_id and title are required',
+      });
     }
-    if (maxRate) {
-      const num = Number(maxRate);
-      if (!Number.isNaN(num)) query = query.lte('hourly_rate', num);
-    }
-    const { data, error } = await query;
+
+    const { data, error } = await supabase
+      .from('services')
+      .upsert(
+        [
+          {
+            id,
+            provider_id,
+            title,
+            category,
+            price,
+            description,
+            image_url,
+          },
+        ],
+        { onConflict: 'id' }
+      )
+      .select('*')
+      .single();
+
     if (error) throw error;
-    res.json({ success: true, tutors: data });
+
+    res.json({ success: true, message: 'service saved', service: data });
   } catch (err) {
-    console.error('List tutors error:', err);
+    console.error('service error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// Serve CRA for unmatched routes
+// GET ALL SERVICES
+app.get('/api/services', async (req, res) => {
+  try {
+    const { category, maxPrice } = req.query;
+
+    let q = supabase.from('services').select('*');
+
+    if (category) q = q.eq('category', category);
+
+    if (maxPrice) {
+      const num = Number(maxPrice);
+      if (!Number.isNaN(num)) q = q.lte('price', num);
+    }
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    res.json({ success: true, services: data });
+  } catch (err) {
+    console.error('services list error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+/* ======================================================
+   IMAGE UPLOAD (Supabase Storage)
+   ====================================================== */
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "no file uploaded" });
+    }
+
+    const file = req.file;
+    const ext = file.originalname.split('.').pop();
+    const filename = `${Date.now()}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from('service-images')
+      .upload(filename, file.buffer, {
+        contentType: file.mimetype,
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+      .from('service-images')
+      .getPublicUrl(filename);
+
+    return res.json({ url: urlData.publicUrl });
+
+  } catch (err) {
+    console.error("upload error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+
+/* ======================================================
+   SERVE REACT APP
+   ====================================================== */
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/build/index.html'));
 });
 
+
+// START SERVER
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`server running on port ${PORT}`));
