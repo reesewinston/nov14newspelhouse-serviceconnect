@@ -5,6 +5,7 @@ import './Dashboard.css';
 function CreateService({ user }) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [imageFile, setImageFile] = useState(null);
@@ -16,12 +17,11 @@ function CreateService({ user }) {
     const formData = new FormData();
     formData.append("file", imageFile);
 
-    // Your backend route for uploading images (you can customize later)
     const res = await axios.post("/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    return res.data.url; // backend returns the Supabase URL
+    return res.data.url;
   };
 
   const handleSubmit = async (e) => {
@@ -33,10 +33,13 @@ function CreateService({ user }) {
         image_url = await handleImageUpload();
       }
 
+      // If category is "other", save the customCategory instead
+      const finalCategory = category === "other" ? customCategory : category;
+
       const res = await axios.post("/api/service", {
         provider_id: user?.id,
         title,
-        category,
+        category: finalCategory,
         price,
         description,
         image_url,
@@ -45,6 +48,7 @@ function CreateService({ user }) {
       setMessage("Service listing created successfully!");
       setTitle('');
       setCategory('');
+      setCustomCategory('');
       setPrice('');
       setDescription('');
       setImageFile(null);
@@ -70,13 +74,38 @@ function CreateService({ user }) {
         />
 
         <label>Category *</label>
-        <input 
-          type="text"
-          placeholder="Type any category..."
+        <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           required
-        />
+          className="dropdown"
+        >
+          <option value="">Select a category...</option>
+          <option value="hair">Hair</option>
+          <option value="nails">Nails</option>
+          <option value="makeup">Makeup</option>
+          <option value="tutoring">Tutoring</option>
+          <option value="photography">Photography</option>
+          <option value="fashion">Fashion & Styling</option>
+          <option value="tech">Tech Services</option>
+          <option value="music">Music / Creative</option>
+          <option value="moving">Moving / Lifting</option>
+          <option value="cleaning">Cleaning</option>
+          <option value="errands">Errands & Tasks</option>
+          <option value="other">Other</option>
+        </select>
+
+        {/* SHOW CUSTOM CATEGORY INPUT ONLY IF "OTHER" IS SELECTED */}
+        {category === "other" && (
+          <input
+            type="text"
+            placeholder="Enter custom category..."
+            value={customCategory}
+            onChange={(e) => setCustomCategory(e.target.value)}
+            required
+            className="dropdown"
+          />
+        )}
 
         <label>Price (optional)</label>
         <input 

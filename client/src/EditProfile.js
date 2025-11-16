@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './Dashboard.css';
+import "./EditProfile.css";
 
 function EditProfile({ user }) {
   const [name, setName] = useState('');
@@ -46,33 +47,52 @@ function EditProfile({ user }) {
   };
 
   return (
-    <div className="form-card">
-      <h2 className="section-title">Edit Profile</h2>
+    <div className="profile-container">
+      <h2 className="profile-title">Edit Profile</h2>
 
-      <form onSubmit={handleSave} className="service-form">
-        <label>Your Name *</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} required />
+      <form onSubmit={handleSave}>
+        
+        <label className="profile-label">Your Name *</label>
+        <input 
+          className="profile-input"
+          value={name} 
+          onChange={(e) => setName(e.target.value)} 
+          required 
+        />
 
-        <label>School</label>
-        <input value={school} onChange={(e) => setSchool(e.target.value)} />
+        <label className="profile-label">School</label>
+        <input 
+          className="profile-input"
+          value={school} 
+          onChange={(e) => setSchool(e.target.value)} 
+        />
 
-        <label>Major</label>
-        <input value={major} onChange={(e) => setMajor(e.target.value)} />
+        <label className="profile-label">Major</label>
+        <input 
+          className="profile-input"
+          value={major} 
+          onChange={(e) => setMajor(e.target.value)} 
+        />
 
-        <label>Your Role</label>
-        <select value={role} onChange={(e) => setRole(e.target.value)}>
+        <label className="profile-label">Your Role</label>
+        <select 
+          className="profile-select"
+          value={role} 
+          onChange={(e) => setRole(e.target.value)}
+        >
           <option value="student">Student</option>
           <option value="provider">Provider</option>
         </select>
 
-        <label>Bio</label>
-        <textarea 
-          value={bio} 
-          onChange={(e) => setBio(e.target.value)} 
+        <label className="profile-label">Bio</label>
+        <textarea
+          className="profile-textarea"
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
           placeholder="Tell us about yourself..."
         />
 
-        <button className="primary-btn" type="submit">Save</button>
+        <button className="save-btn" type="submit">Save</button>
       </form>
 
       {message && <p className="message-text">{message}</p>}

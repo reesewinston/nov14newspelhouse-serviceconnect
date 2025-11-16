@@ -135,3 +135,12 @@
   margin-top: 10px;
   font-weight: 600;
 }
+
+.dropdown {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+  margin-bottom: 15px;
+}
+
