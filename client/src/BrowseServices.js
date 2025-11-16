@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './Dashboard.css';
 
-function BrowseServices() {
+function BrowseServices({ onSelectService }) {
   const [services, setServices] = useState([]);
 
   useEffect(() => {
@@ -11,7 +11,7 @@ function BrowseServices() {
         const res = await axios.get('/api/services');
         setServices(res.data.services || []);
       } catch (err) {
-        console.error(err);
+        console.error("Error loading services:", err);
       }
     };
     load();
@@ -23,7 +23,12 @@ function BrowseServices() {
         <p>No services posted yet.</p>
       ) : (
         services.map((s) => (
-          <div className="card" key={s.id}>
+          <div 
+            className="card" 
+            key={s.id}
+            onClick={() => onSelectService(s)}  // 🔥 MAKE CLICK WORK
+            style={{ cursor: "pointer" }}      // 🔥 Show click cursor
+          >
             {s.image_url && (
               <img src={s.image_url} alt={s.title} className="card-image" />
             )}

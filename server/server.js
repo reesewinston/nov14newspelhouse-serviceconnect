@@ -181,16 +181,24 @@ app.get('/api/profile/:id', async (req, res) => {
   }
 });
 
-
 /* ======================================================
    SERVICES (hair, braids, nails, tutoring, etc.)
    ====================================================== */
 
-// CREATE / UPDATE SERVICE
+// CREATE NEW SERVICE (DO NOT SEND id ON CREATE)
 app.post('/api/service', async (req, res) => {
   try {
-    const { id, provider_id, title, category, price, description, image_url } = req.body;
+    const {
+      id,              // will be undefined for new service
+      provider_id,
+      title,
+      category,
+      price,
+      description,
+      image_url,
+    } = req.body;
 
+    // REQUIRED FIELDS
     if (!provider_id || !title) {
       return res.status(400).json({
         success: false,
@@ -198,33 +206,43 @@ app.post('/api/service', async (req, res) => {
       });
     }
 
+    // NEW SERVICE PAYLOAD — DO NOT INCLUDE id IF CREATING NEW
+    const payload = {
+      provider_id,
+      title,
+      category,
+      price,
+      description,
+      image_url,
+    };
+
+    // If ID exists → this is an update
+    if (id) payload.id = id;
+
+    // Insert (or update) service
     const { data, error } = await supabase
       .from('services')
-      .upsert(
-        [
-          {
-            id,
-            provider_id,
-            title,
-            category,
-            price,
-            description,
-            image_url,
-          },
-        ],
-        { onConflict: 'id' }
-      )
+      .insert(payload)
       .select('*')
       .single();
 
     if (error) throw error;
 
-    res.json({ success: true, message: 'service saved', service: data });
+    res.json({
+      success: true,
+      message: id ? 'service updated' : 'service created',
+      service: data,
+    });
+
   } catch (err) {
     console.error('service error:', err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 });
+
 
 // GET ALL SERVICES
 app.get('/api/services', async (req, res) => {
