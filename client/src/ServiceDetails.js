@@ -7,61 +7,67 @@ export default function ServiceDetails({ service, onBack }) {
 
   return (
     <div className="service-details">
+      <button className="back-btn" onClick={onBack}>
+        ← back to services
+      </button>
 
-      <button className="back-btn" onClick={onBack}>← Back to Services</button>
+      <div className="service-details-header">
+        <div className="service-details-text">
+          <h1 className="service-title-main">{service.title}</h1>
 
-      {/* Service Header */}
-      <h1 className="service-title">{service.title}</h1>
+          <p className="service-pill">
+            {service.category || "service"}{" "}
+            {service.price && <span>• ${service.price}</span>}
+          </p>
+        </div>
 
-      {/* Optional Photo */}
-      {service.image_url && (
-        <img src={service.image_url} alt={service.title} className="service-image" />
-      )}
-
-      {/* Info Section */}
-      <div className="info-section">
-
-        <p><strong>Category:</strong> {service.category}</p>
-
-        {service.price && (
-          <p><strong>Price:</strong> ${service.price}</p>
+        {service.image_url && (
+          <img
+            src={service.image_url}
+            alt={service.title}
+            className="service-image-hero"
+          />
         )}
-
-        <p><strong>Description:</strong> {service.description}</p>
-
-        <hr/>
-
-        {/* Provider info */}
-        <h3>About the Provider</h3>
-        <p><strong>Name:</strong> {service.provider_name || "AUC Student"}</p>
-        <p><strong>Email:</strong> {service.provider_email || "Not provided"}</p>
-
-        <hr/>
-
-        <h3>What to Expect</h3>
-        <ul className="expect-list">
-          <li>Provider will reach out to confirm details</li>
-          <li>Discuss preferred time & location</li>
-          <li>Bring/payment details will be discussed directly</li>
-        </ul>
-
-        <h3>Booking Notes</h3>
-        <p className="notes-text">
-          By booking this service, you are requesting to connect with the provider.
-          They will confirm availability and next steps.
-        </p>
-
       </div>
 
-      <button 
+      <div className="info-section">
+        <h3>about this service</h3>
+        <p className="detail-text">{service.description}</p>
+
+        <hr />
+
+        <h3>about the provider</h3>
+        <p className="detail-text">
+          <strong>name:</strong> {service.provider_name || "auc student"}
+        </p>
+        <p className="detail-text">
+          <strong>email:</strong> {service.provider_email || "not provided"}
+        </p>
+
+        <hr />
+
+        <h3>what to expect</h3>
+        <ul className="expect-list">
+          <li>provider will reach out to confirm details</li>
+          <li>you can discuss preferred time and location</li>
+          <li>payment details will be handled directly with the provider</li>
+        </ul>
+
+        <p className="notes-text">
+          by booking this service, you are requesting to connect with the
+          provider. they will confirm availability and next steps.
+        </p>
+      </div>
+
+      <button
         className="book-btn"
         onClick={() => setShowBooking(true)}
       >
-        Book This Service
+        book this service
       </button>
 
       {showBooking && (
-        <BookingModal 
+        <BookingModal
           service={service}
           onClose={() => setShowBooking(false)}
         />

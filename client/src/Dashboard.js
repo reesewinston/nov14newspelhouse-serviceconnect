@@ -3,17 +3,21 @@ import BrowseServices from "./BrowseServices";
 import CreateService from "./CreateService";
 import MyServices from "./MyServices";
 import EditProfile from "./EditProfile";
-import ServiceDetails from "./ServiceDetails"; 
+import ServiceDetails from "./ServiceDetails";
 import "./Dashboard.css";
 
 function Dashboard({ name, email, onLogout, user }) {
   const [tab, setTab] = useState("browse");
   const [selectedService, setSelectedService] = useState(null);
 
-  return (
-    <div className="dashboard">
+  const goToTab = (nextTab) => {
+    setSelectedService(null);
+    setTab(nextTab);
+  };
 
-      {/* Top Navigation Bar */}
+  return (
+    <div className="app-shell">
+      {/* top nav */}
       <nav className="topnav">
         <div className="logo">
           <span className="sh-blue">Spel</span>
@@ -23,86 +27,70 @@ function Dashboard({ name, email, onLogout, user }) {
 
         <div className="nav-links">
           <button
-            className={tab === "browse" ? "active" : ""}
-            onClick={() => {
-              setSelectedService(null);
-              setTab("browse");
-            }}
+            className={`nav-link ${tab === "browse" ? "active" : ""}`}
+            onClick={() => goToTab("browse")}
           >
-            Browse Services
+            browse services
           </button>
 
           <button
-            className={tab === "create" ? "active" : ""}
-            onClick={() => {
-              setSelectedService(null);
-              setTab("create");
-            }}
+            className={`nav-link ${tab === "create" ? "active" : ""}`}
+            onClick={() => goToTab("create")}
           >
-            Create Listing
+            create listing
           </button>
 
           <button
-            className={tab === "my" ? "active" : ""}
-            onClick={() => {
-              setSelectedService(null);
-              setTab("my");
-            }}
+            className={`nav-link ${tab === "my" ? "active" : ""}`}
+            onClick={() => goToTab("my")}
           >
-            My Listings
+            my listings
           </button>
 
           <button
-            className={tab === "profile" ? "active" : ""}
-            onClick={() => {
-              setSelectedService(null);
-              setTab("profile");
-            }}
+            className={`nav-link ${tab === "profile" ? "active" : ""}`}
+            onClick={() => goToTab("profile")}
           >
-            Edit Profile
+            edit profile
           </button>
 
-          {/* FIXED LOGOUT BUTTON */}
-          <button
-            className="logout-btn"
-            style={{ color: "black", fontWeight: "600" }}
-            onClick={onLogout}
-          >
-            Logout
+          <button className="logout-btn" onClick={onLogout}>
+            logout
           </button>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      {!selectedService && (
-        <header className="hero">
-          <h1>Welcome to SpelHouse Service Connect</h1>
-          <p>A platform for AUC students to offer and discover services.</p>
-        </header>
-      )}
-
-      {/* Main Content */}
-      <div className="content-container">
-        {/* If a service is selected, show details */}
-        {selectedService ? (
-          <ServiceDetails
-            service={selectedService}
-            onBack={() => setSelectedService(null)}
-          />
-        ) : (
-          <>
-            {tab === "browse" && (
-              <BrowseServices onSelectService={setSelectedService} />
-            )}
-
-            {tab === "create" && <CreateService user={user} />}
-
-            {tab === "my" && <MyServices user={user} />}
-
-            {tab === "profile" && <EditProfile user={user} />}
-          </>
+      {/* page content */}
+      <main className="page-main">
+        {/* hero only when browsing list, not inside details */}
+        {!selectedService && (
+          <header className="hero">
+            <h1>SpelHouse Service Connect</h1>
+            <p>a platform for auc students to offer and discover services.</p>
+          </header>
         )}
-      </div>
+
+        <div className="content-container">
+          {selectedService ? (
+            <ServiceDetails
+              service={selectedService}
+              onBack={() => setSelectedService(null)}
+            />
+          ) : (
+            <>
+              {tab === "browse" && (
+                <BrowseServices onSelectService={setSelectedService} />
+              )}
+
+              {tab === "create" && <CreateService user={user} />}
+
+              {tab === "my" && <MyServices user={user} />}
+
+              {tab === "profile" && <EditProfile user={user} />}
+            </>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
